@@ -8,8 +8,22 @@ from django.views.generic.list import ListView
 from .forms import VariationInventoryFormSet
 from .mixins import LoginRequiredMixin, StaffRequiredMixin
 from .models import Category, Product, Variation
+from .serializers import CategorySerializers
 
-from pprint import pprint
+from rest_framework import generics
+
+
+# API CBVs
+class CategoryListAPIView(generics.ListCreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializers
+
+
+class CategoryRetriveAPIView(generics.RetrieveAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializers
+
+# CBVs
 
 
 class CategoryDetailView(DetailView):
@@ -48,7 +62,6 @@ class VariationListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(VariationListView, self).get_context_data(**kwargs)
         context["formset"] = VariationInventoryFormSet(queryset=self.get_queryset())
-        pprint(context)
         return context
 
     def get_queryset(self, *args, **kwargs):
