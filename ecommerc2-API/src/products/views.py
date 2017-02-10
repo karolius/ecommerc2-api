@@ -8,7 +8,7 @@ from django.views.generic.list import ListView
 from .forms import VariationInventoryFormSet
 from .mixins import LoginRequiredMixin, StaffRequiredMixin
 from .models import Category, Product, Variation
-from .serializers import CategorySerializers
+from .serializers import CategorySerializer
 
 from rest_framework import generics
 
@@ -16,12 +16,12 @@ from rest_framework import generics
 # API CBVs
 class CategoryListAPIView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
-    serializer_class = CategorySerializers
+    serializer_class = CategorySerializer
 
 
 class CategoryRetriveAPIView(generics.RetrieveAPIView):
     queryset = Category.objects.all()
-    serializer_class = CategorySerializers
+    serializer_class = CategorySerializer
 
 # CBVs
 

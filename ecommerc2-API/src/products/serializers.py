@@ -1,9 +1,45 @@
 from rest_framework import serializers
-from .models import Category
+from .models import Category, Product, Variation
 
 
-class CategorySerializers(serializers.ModelSerializer):
+class VariationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Variation
+        fields = [
+            "title",
+            "price",
+        ]
+
+"""
+the error when u not specify many=True on item_set
+
+Got AttributeError when attempting to get a value for field `title` on serializer
+`VariationSerializer`. The serializer field might be named incorrectly and not
+match any attribute or key on the `RelatedManager` instance. Original exception
+text was: 'RelatedManager' object has no attribute 'title'.
+"""
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    variation_set = VariationSerializer(many=True)
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "title",
+            "image",
+            "variation_set"
+        ]
+
+    def get_image(self, obj):
+        return obj.productimage_set.first().image.url
+
+
+class CategorySerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='category_detail_api')
+    product_set = ProductSerializer(many=True)  # we have M2M/FK relationship, O2O->False
 
     class Meta:
         model = Category
@@ -12,4 +48,6 @@ class CategorySerializers(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "product_set",  # obj.product_set.all()
+            "default_category",
         ]
