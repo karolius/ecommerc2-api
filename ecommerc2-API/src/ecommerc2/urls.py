@@ -22,6 +22,8 @@ from orders.views import (
 from products.views import (
     CategoryListAPIView,
     CategoryRetriveAPIView,
+    ProductListAPIView,
+    ProductRetriveAPIView,
 )
 from .views import about
 
@@ -50,9 +52,12 @@ urlpatterns = [
 
 
 # API Patterns
-urlpatterns = [
-    url(r'^api/categories$', CategoryListAPIView.as_view(), name='category_list_api'),
+urlpatterns += [
+    url(r'^api/categories/$', CategoryListAPIView.as_view(), name='category_list_api'),
     url(r'^api/categories/(?P<pk>\d+)/$', CategoryRetriveAPIView.as_view(), name='category_detail_api'),
+    url(r'^api/products/$', ProductListAPIView.as_view(), name='product_list_api'),
+    url(r'^api/products/(?P<pk>\d+)/$', ProductRetriveAPIView.as_view(), name='product_detail_api'),
+
 ]
 
 if settings.DEBUG:

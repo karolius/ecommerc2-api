@@ -137,3 +137,13 @@ BRAINTREE_PUBLIC = "r5t59qtwypfh82fk"
 BRAINTREE_PRIVATE = "a785e99c3a97dae8aad28dcde5c49395"
 BRAINTREE_MERCHANT_ID = "6yszvrv7645wmgxd"
 BRAINTREE_ENVIRONMENT = "sandbox"
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentications.SessionAuthentication',
+    ),
+}

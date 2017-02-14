@@ -8,9 +8,17 @@ from django.views.generic.list import ListView
 from .forms import VariationInventoryFormSet
 from .mixins import LoginRequiredMixin, StaffRequiredMixin
 from .models import Category, Product, Variation
-from .serializers import CategorySerializer
+from .pagination import ProductPagination
+from .serializers import (
+    CategorySerializer,
+    ProductSerializer,
+    ProductDetailSerializer,
+    ProductDetailUpdateSerializer
+)
 
 from rest_framework import generics
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 
 # API CBVs
@@ -20,10 +28,28 @@ class CategoryListAPIView(generics.ListCreateAPIView):
 
 
 class CategoryRetriveAPIView(generics.RetrieveAPIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
+
+class ProductListAPIView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    pagination_class = ProductPagination
+
+
+class ProductRetriveAPIView(generics.RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductDetailSerializer
 # CBVs
+
+
+# class ProductCreateAPIView(generics.CreateAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductDetailSerializer
 
 
 class CategoryDetailView(DetailView):
