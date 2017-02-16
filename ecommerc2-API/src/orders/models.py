@@ -8,6 +8,7 @@ from django.db.models.signals import pre_save, post_save
 
 from carts.models import Cart
 
+
 if settings.DEBUG:
     braintree.Configuration.configure(
         braintree.Environment.Sandbox,
@@ -103,6 +104,7 @@ class Order (models.Model):
 
     def get_absolute_url(self):
         return reverse("order_detail", kwargs={"pk": self.pk})
+
 
 def order_pre_save(sender, instance, *args, **kwargs):
     total_shipping_price = Decimal(instance.shipping_total_price)

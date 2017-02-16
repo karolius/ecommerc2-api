@@ -1,8 +1,13 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import redirect
 from django.views.generic import CreateView, DetailView, ListView
 from django.views.generic import FormView
+
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .forms import AddressForm, UserAddressForm
 from .mixins import CartOrderMixin, LoginRequiredMixin
@@ -11,6 +16,71 @@ from .models import (
     UserAddress,
     UserCheckout,
 )
+
+
+User = get_user_model()
+
+
+class UserCheckoutMixin(object):
+    def user_failure(self, message=None):
+        data = {
+            "message": "There was an error. Please try again later",
+            "success": False
+        }
+        if message:
+            data["message"] = message
+        return data
+
+    def get_checkout_data(self, user=None, email=None):
+        user_checkout = None
+        data = {}
+        if user and not email:
+            if user.is_authenticated():
+                if user.email:
+                    user_checkout = UserCheckout.objects.get_or_create(user=user, email=user.email)[0]
+                else:
+                    user_checkout = UserCheckout.objects.get_or_create(user=user)[0]
+        elif email:
+            if not user:
+                user_exists = User.objects.filter(email=email).count()
+                if user_exists != 0:
+                    return self.user_failure(message="This user already exists, please login.")
+            try:
+                user_checkout = UserCheckout.objects.get_or_create(email=email)[0]
+                if user:
+                    user_checkout.user = user
+                    user_checkout.save()
+            except:
+                pass
+
+        if user_checkout:
+            data["token"] = user_checkout.get_client_token()
+            data["braintree_id"] = user_checkout.get_braintree_id()
+            data["user_checkout_id"] = user_checkout.id
+            data["succes"] = True
+        return data
+
+
+class UserCheckoutAPI(UserCheckoutMixin, APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, format=None):
+        data = self.get_checkout_data(user=request.user)
+        return Response(data)
+
+    def post(self, request, format=None):
+        email = request.data.get("email")
+        user = request.user
+        if user.is_authenticated():
+            if email == user.email:
+                data = self.get_checkout_data(user=user, email=email)
+            else:
+                data = self.get_checkout_data(user=user)
+        elif email and not user.is_authenticated():
+            data = self.get_checkout_data(email=email)
+        else:
+            data = self.user_failure(message="Make sure you are authenticated or using a valid email.")
+        return Response(data)
 
 
 class OrderDetailView(DetailView):

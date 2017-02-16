@@ -1,30 +1,50 @@
 from django.contrib import messages
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 from django.http import Http404
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
-from .forms import VariationInventoryFormSet
-from .mixins import LoginRequiredMixin, StaffRequiredMixin
+from rest_framework import generics, filters
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+from rest_framework.reverse import reverse as api_reverse
+from rest_framework.views import APIView
+
+from .filters import ProductFilter
+from .forms import VariationInventoryFormSet, ProductFilterForm
+from .mixins import StaffRequiredMixin
 from .models import Category, Product, Variation
-from .pagination import ProductPagination
+from .pagination import CategoryPagination, ProductPagination
 from .serializers import (
     CategorySerializer,
     ProductSerializer,
-    ProductDetailSerializer,
-    ProductDetailUpdateSerializer
+    ProductDetailSerializer
 )
-
-from rest_framework import generics
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 
 # API CBVs
+class APIHomeView(APIView):
+    def get(self, request, format=None):
+        data = {
+            "products": {
+                "count": Product.objects.all().count(),
+                "url": api_reverse("product_list_api", request=request)
+            },
+            "categories": {
+                "count": Category.objects.all().count(),
+                "url": api_reverse("category_list_api", request=request)
+            },
+        }
+        return Response(data)
+
+
 class CategoryListAPIView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    pagination_class = CategoryPagination
 
 
 class CategoryRetriveAPIView(generics.RetrieveAPIView):
@@ -40,13 +60,20 @@ class ProductListAPIView(generics.ListCreateAPIView):
     serializer_class = ProductSerializer
     pagination_class = ProductPagination
 
+    filter_backends = (filters.SearchFilter,
+                       filters.OrderingFilter,
+                       filters.DjangoFilterBackend)
+    search_fields = ('title', 'description')
+    ordering_fields = ("title", "id")
+    filter_class = ProductFilter
+
 
 class ProductRetriveAPIView(generics.RetrieveAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductDetailSerializer
+
+
 # CBVs
-
-
 # class ProductCreateAPIView(generics.CreateAPIView):
 #     queryset = Product.objects.all()
 #     serializer_class = ProductDetailSerializer
@@ -115,14 +142,42 @@ class VariationListView(StaffRequiredMixin, ListView):
         raise Http404
 
 
-class ProductListView(ListView):
+class FilterMixin(object):
+    filter_class = None
+    search_ordering_param = "ordering"
+
+    def get_queryset(self, *args, **kwargs):
+        try:
+            qs = super(FilterMixin, self).get_queryset(*args, **kwargs)
+            return qs
+        except:
+            raise ImproperlyConfigured("You must have a queryset in order to use the FilterMixin")
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(FilterMixin, self).get_context_data(*args, **kwargs)
+        qs = self.get_queryset()
+
+        ordering = self.request.GET.get(self.search_ordering_param)
+        if ordering:
+            qs = qs.order_by(ordering)
+
+        filter_class = self.filter_class
+        if filter_class:
+            f = filter_class(self.request.GET, queryset=qs)
+            context["object_list"] = f.qs
+        return context
+
+
+class ProductListView(FilterMixin, ListView):
     model = Product
     queryset = Product.objects.all()
+    filter_class = ProductFilter
 
     def get_context_data(self, **kwargs):
         context = super(ProductListView, self).get_context_data(**kwargs)
         context["now"] = timezone.now
         context["query"] = self.request.GET.get("q")
+        context["filter_form"] = ProductFilterForm(data=self.request.GET or None)
         return context
 
     def get_queryset(self, *args, **kwargs):
